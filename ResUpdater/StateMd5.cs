@@ -4,51 +4,132 @@ using UnityEngine;
 
 namespace ResUpdater
 {
-    internal class StateMd5 : StateMeta
+    public class StateMd5 : AbstractStateMeta
     {
-        internal class Info
+        public class Info
         {
-            internal string md5;
-            internal int size;
+            public string Md5 { get; private set; }
+            public int Size { get; private set; }
+
+            public Info(string md5, int size)
+            {
+                Md5 = md5;
+                Size = size;
+            }
         }
 
-        
+        private static readonly Dictionary<string, Info> empty = new Dictionary<string, Info>();
+
         internal const string res_md5 = "res.md5";
         internal const string res_md5_latest = "res.md5.latest";
 
-        internal Dictionary<string, Info> streamInfo;
+        public Dictionary<string, Info> StreamInfo { get; private set; }
+        public Dictionary<string, Info> PersistentInfo { get; private set; }
 
-        internal bool persistentNotExist;
-        internal Dictionary<string, Info> persistentInfo;
-
-        internal bool latestDownloadErr;
-        internal Dictionary<string, Info> latestInfo;
+        public bool LatestOk { get; private set; }
+        public Dictionary<string, Info> LatestInfo { get; private set; }
 
 
         public StateMd5(ResUpdater updater) : base(updater, res_md5, res_md5_latest)
         {
         }
 
-        protected override void OnPersistentNotExists()
+        internal void Start(bool needUpdate)
         {
-            
-        }
-
-        protected override void OnWWW(Loc loc, WWW www)
-        {
-            
+            DoStart(needUpdate);
+            if (!needUpdate)
+            {
+                LatestInfo = empty;
+            }
         }
 
         protected override void OnDownloadError(Exception err)
         {
             updater.Reporter.DownloadLatestMd5Err(err);
-            latestDownloadErr = true;
+            LatestOk = false;
+            LatestInfo = empty;
             check();
         }
 
+        protected override void OnPersistentNotExists()
+        {
+            PersistentInfo = empty;
+        }
+
+        protected override void OnWWW(Loc loc, WWW www)
+        {
+            Dictionary<string, Info> info;
+            bool ok = false;
+            if (www.error != null)
+            {
+                updater.Reporter.GetMd5Err(loc, www.error, null);
+                info = empty;
+            }
+            else
+            {
+                try
+                {
+                    info = new Dictionary<string, Info>();
+                    foreach (var line in www.text.Split('\n'))
+                    {
+                        var sp = line.Split(' ');
+                        var res = sp[0];
+                        var md5 = sp[1];
+                        var size = int.Parse(sp[2]);
+
+                        info.Add(res, new Info(md5, size));
+                    }
+                    ok = true;
+                }
+                catch (Exception e)
+                {
+                    updater.Reporter.GetMd5Err(loc, null, e);
+                    info = empty;
+                }
+            }
+
+            switch (loc)
+            {
+                case Loc.Stream:
+                    StreamInfo = info;
+                    break;
+                case Loc.Persistent:
+                    PersistentInfo = info;
+                    break;
+                default:
+                    LatestOk = ok;
+                    LatestInfo = info;
+                    break;
+            }
+
+            check();
+        }
+
+
         private void check()
         {
-            throw new NotImplementedException();
+            if (StreamInfo != null && PersistentInfo != null && LatestInfo != null)
+            {
+                State nextState;
+                if (updater.VersionState.NeedUpdate)
+                {
+                    if (LatestOk)
+                    {
+                        //TODO
+                        nextState = State.ResDownload;
+                    }
+                    else
+                    {
+                        nextState = State.Failed;
+                    }
+                }
+                else
+                {
+                    //TODO
+                    nextState = State.Success;
+                }
+                updater.Reporter.Md5CheckOver(nextState);
+            }
         }
     }
 }

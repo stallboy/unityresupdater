@@ -26,10 +26,13 @@ namespace ResUpdater
 
         void VersionCheckOver(State nextState, int localVersion, int latestVersion);
 
+
         void DownloadLatestMd5Err(Exception err);
 
+        void GetMd5Err(Loc loc, string wwwwErr, Exception parseErr);
 
-
+        void Md5CheckOver(State nextState);
+        
     }
 
 }

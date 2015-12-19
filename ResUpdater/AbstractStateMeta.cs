@@ -5,29 +5,26 @@ using UnityEngine;
 
 namespace ResUpdater
 {
-    internal abstract class StateMeta
+    public abstract class AbstractStateMeta
     {
         protected readonly ResUpdater updater;
         private readonly string _name;
         private readonly string _latestName;
-        protected bool _download;
 
-        protected StateMeta(ResUpdater updater, string name, string latestName)
+        protected AbstractStateMeta(ResUpdater updater, string name, string latestName)
         {
             this.updater = updater;
             _name = name;
             _latestName = latestName;
         }
-        
-        internal void Start(bool download)
+
+        protected void DoStart(bool download)
         {
-            _download = download;
             if (download)
             {
                 updater.StartDownload(_name, _latestName, true);
             }
             updater.StartCoroutine(StartRead(Loc.Stream));
-
             string path = Application.persistentDataPath + "/" + _name;
             if (File.Exists(path))
             {
@@ -38,7 +35,7 @@ namespace ResUpdater
                 OnPersistentNotExists();
             }
         }
-        
+
         protected abstract void OnDownloadError(Exception err);
         protected abstract void OnPersistentNotExists();
         protected abstract void OnWWW(Loc loc, WWW www);
@@ -58,8 +55,7 @@ namespace ResUpdater
                     url = "file://" + Application.persistentDataPath + "/" + _latestName;
                     break;
             }
-
-
+            
             WWW www = new WWW(url);
             yield return www;
             OnWWW(loc, www);
