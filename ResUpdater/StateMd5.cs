@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace ResUpdater
@@ -8,13 +9,18 @@ namespace ResUpdater
     {
         public class Info
         {
-            public string Md5 { get; private set; }
-            public int Size { get; private set; }
+            public string Md5 { get; }
+            public int Size { get; }
 
             public Info(string md5, int size)
             {
                 Md5 = md5;
                 Size = size;
+            }
+
+            public bool Equals(Info other)
+            {
+                return Md5.Equals(other.Md5) && Size == other.Size;
             }
         }
 
@@ -36,7 +42,7 @@ namespace ResUpdater
 
         internal void Start(bool needUpdate)
         {
-            DoStart(needUpdate);
+            DoStart(needUpdate, res_md5 + "?version=" + updater.VersionState.LatestVersion);
             if (!needUpdate)
             {
                 LatestInfo = empty;
@@ -110,25 +116,84 @@ namespace ResUpdater
         {
             if (StreamInfo != null && PersistentInfo != null && LatestInfo != null)
             {
-                State nextState;
                 if (updater.VersionState.NeedUpdate)
                 {
                     if (LatestOk)
                     {
-                        //TODO
-                        nextState = State.ResDownload;
+                        doCheckResource(LatestInfo, true);
                     }
                     else
                     {
-                        nextState = State.Failed;
+                        updater.Reporter.Md5CheckOver(State.Failed, null);
                     }
                 }
                 else
                 {
-                    //TODO
-                    nextState = State.Success;
+                    doCheckResource(PersistentInfo, false);
                 }
-                updater.Reporter.Md5CheckOver(nextState);
+            }
+        }
+
+        private void doCheckResource(Dictionary<string, Info> target, bool isTargetLatest)
+        {
+            var downloadList = new Dictionary<string, Info>();
+            foreach (var kv in target)
+            {
+                var fn = kv.Key;
+                var info = kv.Value;
+
+                Info infoInStream;
+                bool inStream = StreamInfo.TryGetValue(fn, out infoInStream) &&
+                                infoInStream.Equals(info);
+
+                if (inStream)
+                {
+                    Res.resourcesInStreamWhenNotUseStreamVersion.Add(fn);
+                }
+                else
+                {
+                    var fi = new FileInfo(Application.persistentDataPath + "/" + fn);
+                    if (fi.Exists)
+                    {
+                        if (fi.Length != info.Size)
+                        {
+                            downloadList.Add(fn, info);
+                            fi.Delete();
+                        }
+                        else if (isTargetLatest)
+                        {
+                            Info infoInPersistent;
+                            bool inPersistent = PersistentInfo.TryGetValue(fn, out infoInPersistent) &&
+                                                infoInPersistent.Equals(info);
+
+                            if (!inPersistent)
+                            {
+                                downloadList.Add(fn, info);
+                                fi.Delete();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        downloadList.Add(fn, info);
+                    }
+                }
+            }
+
+            if (isTargetLatest)
+            {
+                File.Replace(Application.persistentDataPath + "/" + res_md5_latest, Application.persistentDataPath + "/" + res_md5, null);
+                File.Replace(Application.persistentDataPath + "/" + StateVersion.res_version_latest, Application.persistentDataPath + "/" + StateVersion.res_version, null);
+            }
+
+            if (downloadList.Count == 0)
+            {
+                updater.Reporter.Md5CheckOver(State.Success, null);
+            }
+            else
+            {
+                updater.Reporter.Md5CheckOver(State.ResDownload, downloadList);
+                updater.ResDownloadState.Start(downloadList);
             }
         }
     }

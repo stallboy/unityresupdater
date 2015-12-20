@@ -38,7 +38,7 @@ namespace ResUpdater
             downloader.Dispose();
         }
 
-        internal void StartDownload(string url, string fn, bool isHighPriority = false)
+        internal void StartDownload(string url, string fn, bool isHighPriority)
         {
             downloader.StartDownload(url, fn, isHighPriority);
         }

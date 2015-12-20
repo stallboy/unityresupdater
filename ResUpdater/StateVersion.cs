@@ -25,7 +25,9 @@ namespace ResUpdater
 
         internal void Start()
         {
-            DoStart(true);
+            Res.useStreamVersion = false;
+            Res.resourcesInStreamWhenNotUseStreamVersion.Clear();
+            DoStart(true, res_version + "?version=" + DateTime.Now.Ticks);
         }
 
         protected override void OnDownloadError(Exception err)
@@ -90,21 +92,24 @@ namespace ResUpdater
                     LocalVersion = StreamVersion;
                 }
 
-                var nextState = State.Failed;
                 if (LatestVersion != 0)
                 {
                     NeedUpdate = LocalVersion < LatestVersion;
                     if (!NeedUpdate && LocalVersion != -1 && LocalVersionLoc == Loc.Stream)
                     {
-                        nextState = State.Success;
+                        Res.useStreamVersion = true;
+                        updater.Reporter.VersionCheckOver(State.Success, LocalVersion, LatestVersion);
                     }
                     else
                     {
-                        nextState = State.Md5Check;
+                        updater.Reporter.VersionCheckOver(State.Md5Check, LocalVersion, LatestVersion);
                         updater.Md5State.Start(NeedUpdate);
                     }
                 }
-                updater.Reporter.VersionCheckOver(nextState, LocalVersion, LatestVersion);
+                else
+                {
+                    updater.Reporter.VersionCheckOver(State.Failed, LocalVersion, LatestVersion);
+                }
             }
         }
     }

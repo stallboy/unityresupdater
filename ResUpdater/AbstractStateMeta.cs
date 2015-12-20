@@ -18,11 +18,11 @@ namespace ResUpdater
             _latestName = latestName;
         }
 
-        protected void DoStart(bool download)
+        protected void DoStart(bool download, string url)
         {
             if (download)
             {
-                updater.StartDownload(_name, _latestName, true);
+                updater.StartDownload(url, _latestName, true);
             }
             updater.StartCoroutine(StartRead(Loc.Stream));
             string path = Application.persistentDataPath + "/" + _name;
