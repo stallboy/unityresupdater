@@ -40,3 +40,12 @@ unity resource updater
 4. Succeed
 
 5. Failed
+
+###使用
+
+1. using(var ru = new ResUpdater(hosts, thread, reporter, startCoroutine)) { ru.Start() }
+
+2. reporter来驱动UI
+
+
+
