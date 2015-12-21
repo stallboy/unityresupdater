@@ -9,13 +9,11 @@ namespace ResUpdater
         internal const string res_version_latest = "res.version.latest";
 
         //0: err, >0 ok
-        public int StreamVersion { get; private set; } = -1;
-        public int PersistentVersion { get; private set; } = -1;
-        public int LatestVersion { get; private set; } = -1;
+        public int StreamVersion { get; private set; }
+        public int PersistentVersion { get; private set; }
+        public int LatestVersion { get; private set; }
 
-        public int LocalVersion { get; private set; } = -1;
-        public Loc LocalVersionLoc { get; private set; }
-
+        public int LocalVersion { get; private set; }
         public bool NeedUpdate { get; private set; }
 
 
@@ -25,6 +23,11 @@ namespace ResUpdater
 
         internal void Start()
         {
+            StreamVersion = -1;
+            PersistentVersion = -1;
+            LatestVersion = -1;
+            LocalVersion = -1;
+            NeedUpdate = false;
             Res.useStreamVersion = false;
             Res.resourcesInStreamWhenNotUseStreamVersion.Clear();
             DoStart(true, res_version + "?version=" + DateTime.Now.Ticks);
@@ -80,34 +83,24 @@ namespace ResUpdater
         {
             if (StreamVersion != -1 && PersistentVersion != -1 && LatestVersion != -1)
             {
-                if (PersistentVersion != 0)
-                {
-                    LocalVersionLoc = Loc.Persistent;
-                    LocalVersion = PersistentVersion;
-                }
-
-                if (StreamVersion != 0 && StreamVersion > LocalVersion)
-                {
-                    LocalVersionLoc = Loc.Stream;
-                    LocalVersion = StreamVersion;
-                }
-
                 if (LatestVersion != 0)
                 {
-                    NeedUpdate = LocalVersion < LatestVersion;
-                    if (!NeedUpdate && LocalVersion != -1 && LocalVersionLoc == Loc.Stream)
+                    if (LatestVersion == StreamVersion)
                     {
                         Res.useStreamVersion = true;
                         updater.Reporter.VersionCheckOver(State.Success, LocalVersion, LatestVersion);
                     }
                     else
                     {
+                        LocalVersion = Math.Max(StreamVersion, PersistentVersion);
+                        NeedUpdate = LatestVersion != PersistentVersion;
                         updater.Reporter.VersionCheckOver(State.Md5Check, LocalVersion, LatestVersion);
                         updater.Md5State.Start(NeedUpdate);
                     }
                 }
                 else
                 {
+                    LocalVersion = Math.Max(StreamVersion, PersistentVersion);
                     updater.Reporter.VersionCheckOver(State.Failed, LocalVersion, LatestVersion);
                 }
             }
