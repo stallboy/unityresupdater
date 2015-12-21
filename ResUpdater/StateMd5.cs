@@ -9,8 +9,8 @@ namespace ResUpdater
     {
         public class Info
         {
-            public string Md5 { get; }
-            public int Size { get; }
+            public readonly string Md5;
+            public readonly int Size;
 
             public Info(string md5, int size)
             {
@@ -182,8 +182,10 @@ namespace ResUpdater
 
             if (isTargetLatest)
             {
-                File.Replace(Application.persistentDataPath + "/" + res_md5_latest, Application.persistentDataPath + "/" + res_md5, null);
-                File.Replace(Application.persistentDataPath + "/" + StateVersion.res_version_latest, Application.persistentDataPath + "/" + StateVersion.res_version, null);
+                File.Replace(Application.persistentDataPath + "/" + res_md5_latest,
+                    Application.persistentDataPath + "/" + res_md5, null);
+                File.Replace(Application.persistentDataPath + "/" + StateVersion.res_version_latest,
+                    Application.persistentDataPath + "/" + StateVersion.res_version, null);
             }
 
             if (downloadList.Count == 0)

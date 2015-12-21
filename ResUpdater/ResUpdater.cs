@@ -13,9 +13,9 @@ namespace ResUpdater
         internal readonly Reporter Reporter;
         internal readonly StartCoroutineFunc StartCoroutine;
 
-        public StateVersion VersionState { get; }
-        public StateMd5 Md5State { get; }
-        public StateResDownload ResDownloadState { get; }
+        public readonly StateVersion VersionState;
+        public readonly StateMd5 Md5State;
+        public readonly StateResDownload ResDownloadState;
 
         public ResUpdater(string[] hosts, int thread, Reporter reporter, StartCoroutineFunc startCoroutine)
         {
