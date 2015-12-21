@@ -26,17 +26,32 @@ unity resource updater
 
 ###基本流程
 
-1. VersionCheck 下载res.version到res.version.latest，读取2个目录version， 比较。
+1. VersionCheck 下载res.version到res.version.latest，读取2个目录res.version和res.version.latest
+
+    1. 如果下载或读取res.version.latest出错，则Failed
+    2. 如果res.version.latest == stream里的version，则Succeed
+    3. 进入Md5Check
 
 2. Md5Check
 
-    1. 如果version 需要升级，则下载res.md5.lastest，读取2个目录res.md5，比较， 删除掉md5和size不对的res，
-       把res.md5.lastest重命名为res.md5；把res.version.latest重命名为res.version； 启动下载剩余的res
+    1. 如果res.version.latest == persistent里的额res.version，则不用下载res.md5.latest。只读取2个目录res.md5。
+       检测persistent里的res.md5里对应的文件是否都存在，构建待下载列表（如果在stream里，比较Md5和Size，不在的话在Persistent目录下找如果找到取文件长度比较Size，如果长度不同则删除）。（以免用户删除部分文件,或2下载res没完成）。
+       如果待下载列表为空则Succeed。
+       否则，启动下载剩余的res，进入ResDownload。
 
-    2. 如果version 不需要升级，则检测已有res.md5，对应的文件是否都存在。（以免用户删除部分文件,或2下载res没完成），
-       如果都存在则成功；如果有不存在的，启动下载剩余的res
+    2. 如果version需要升级，则下载res.md5.lastest，读取2个目录res.md5和res.md5.latest。
+       如果下载或读取res.md5.latest出错，则Failed。
+       检测res.md5.latest里对应的文件是否都存在，构建待下载列表(如果在stream里，比较Md5和Size，不在的话在Persistent目录下找如果找到取文件长度比较Size，同时比较Persistent下res.md5里对应的Md5和Size，如果不同则删除)。
+       把res.md5.lastest重命名为res.md5。
+       把res.version.latest重命名为res.version。
+       如果待下载列表为空则Succeed。
+       否则，启动下载剩余的res，进入ResDownload。
 
-3. ResDownload，（下载完成后需要再计算一遍md5吗？如果需要，全部下载完成后，计算完一遍，创建一个checked文件做标记，暂时不计算）
+
+3. ResDownload
+    
+    1. 如果都下载完成没错误，进入Succeed
+    2. 否则Failed
 
 4. Succeed
 
@@ -48,9 +63,9 @@ unity resource updater
 
 2. reporter来驱动UI
 
-###TODO
+###Note
 
-1. 虽然按照标准有query_string时http cache要带上query_string 作为key，但好像有的宽带提供商没按标准，所以最保险的是更新的时候改文件名字？
-现在是加了"?version=<md5>"的方式
+1. 虽然按照标准有query_string时http cache要带上query_string 作为key，但好像有的宽带提供商没按标准，所以最保险的策略可能是更新的时候改文件名字。
+现在是加了"?version=md5"的方式。好像一般也没问题。
 
-
+2. 下载完成没有计算文件的md5，来跟res.md5比对，感觉没必要，应该相信tcp，相信不会被中间缓存取成老版本。
