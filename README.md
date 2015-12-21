@@ -28,19 +28,19 @@ unity resource updater
 
 1. VersionCheck 下载res.version到res.version.latest，读取2个目录res.version和res.version.latest
 
-    1. 如果下载或读取res.version.latest出错，则Failed
-    2. 如果res.version.latest == stream里的version，则Succeed
-    3. 进入Md5Check
+    * 如果下载或读取res.version.latest出错，则Failed。
+    * 如果res.version.latest == stream里的res.version，则Succeed。（信任stream目录整体不被修改）
+    * 进入Md5Check
 
 2. Md5Check
 
-    1. 如果res.version.latest == persistent里的res.version，表明无需升级
+    * 如果res.version.latest == persistent里的res.version （自动修复的关键在这，不能信任persistent目录不被修改，信任的是单个文件不被修改）
        * 不用下载res.md5.latest。只读取2个目录res.md5。
        * 检测persistent里的res.md5里对应的文件是否都存在，构建待下载列表（如果在stream里，比较Md5和Size，不在的话在Persistent目录下找如果找到取文件长度比较Size，如果长度不同则删除）。（以免用户删除部分文件,或2下载res没完成）。
        * 如果待下载列表为空则Succeed。
        * 否则，启动下载剩余的res，进入ResDownload。
 
-    2. 否则表明需要升级
+    * 否则
        * 下载res.md5.lastest，读取2个目录res.md5和res.md5.latest。
        * 如果下载或读取res.md5.latest出错，则Failed。
        * 检测res.md5.latest里对应的文件是否都存在，构建待下载列表(如果在stream里，比较Md5和Size，不在的话在Persistent目录下找如果找到取文件长度比较Size，同时比较Persistent下res.md5里对应的Md5和Size，如果不同则删除)。
@@ -49,11 +49,10 @@ unity resource updater
        * 如果待下载列表为空则Succeed。
        * 否则，启动下载剩余的res，进入ResDownload。
 
-
 3. ResDownload
     
-    1. 如果都下载完成没错误，进入Succeed
-    2. 否则Failed
+    * 如果都下载完成没错误，进入Succeed
+    * 否则Failed
 
 4. Succeed
 
