@@ -13,9 +13,9 @@ namespace ResUpdater
         internal readonly Reporter Reporter;
         internal readonly StartCoroutineFunc StartCoroutine;
 
-        public readonly StateVersion VersionState;
-        public readonly StateMd5 Md5State;
-        public readonly StateResDownload ResDownloadState;
+        public readonly CheckVersionState CheckVersion;
+        public readonly CheckMd5State CheckMd5;
+        public readonly DownloadResState DownloadRes;
 
         public ResUpdater(string[] hosts, int thread, Reporter reporter, StartCoroutineFunc startCoroutine)
         {
@@ -23,14 +23,14 @@ namespace ResUpdater
             Reporter = reporter;
             StartCoroutine = startCoroutine;
 
-            VersionState = new StateVersion(this);
-            Md5State = new StateMd5(this);
-            ResDownloadState = new StateResDownload(this);
+            CheckVersion = new CheckVersionState(this);
+            CheckMd5 = new CheckMd5State(this);
+            DownloadRes = new DownloadResState(this);
         }
 
         public void Start()
         {
-            VersionState.Start();
+            CheckVersion.Start();
         }
 
         public void Dispose()
@@ -47,14 +47,14 @@ namespace ResUpdater
         {
             switch (fn)
             {
-                case StateVersion.res_version_latest:
-                    VersionState.OnDownloadCompleted(err);
+                case CheckVersionState.res_version_latest:
+                    CheckVersion.OnDownloadCompleted(err);
                     break;
-                case StateMd5.res_md5_latest:
-                    Md5State.OnDownloadCompleted(err);
+                case CheckMd5State.res_md5_latest:
+                    CheckMd5.OnDownloadCompleted(err);
                     break;
                 default:
-                    ResDownloadState.OnDownloadCompleted(err, fn);
+                    DownloadRes.OnDownloadCompleted(err, fn);
                     break;
             }
         }

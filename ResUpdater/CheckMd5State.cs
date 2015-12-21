@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace ResUpdater
 {
-    public class StateMd5 : AbstractStateMeta
+    public class CheckMd5State : AbstractCheckState
     {
         public class Info
         {
@@ -32,20 +32,39 @@ namespace ResUpdater
         public Dictionary<string, Info> StreamInfo { get; private set; }
         public Dictionary<string, Info> PersistentInfo { get; private set; }
 
+        public bool DownloadLatest { get; private set; }
         public bool LatestOk { get; private set; }
         public Dictionary<string, Info> LatestInfo { get; private set; }
 
 
-        public StateMd5(ResUpdater updater) : base(updater, res_md5, res_md5_latest)
+        public CheckMd5State(ResUpdater updater) : base(updater, res_md5, res_md5_latest)
         {
         }
 
-        internal void Start(bool needUpdate)
+        internal void Start()
         {
-            DoStart(needUpdate, res_md5 + "?version=" + updater.VersionState.LatestVersion);
-            if (!needUpdate)
+            updater.StartCoroutine(StartRead(Loc.Stream));
+            string path = Application.persistentDataPath + "/" + res_md5;
+            if (File.Exists(path))
             {
-                LatestInfo = empty;
+                updater.StartCoroutine(StartRead(Loc.Persistent));
+                if (updater.CheckVersion.PersistentVersion == updater.CheckVersion.LatestVersion)
+                {
+                    DownloadLatest = false;
+                    LatestInfo = empty;
+                }
+                else
+                {
+                    DownloadLatest = true;
+                    updater.StartDownload(res_md5 + "?version=" + updater.CheckVersion.LatestVersion, res_md5_latest,
+                        true);
+                }
+            }
+            else
+            {
+                PersistentInfo = empty;
+                DownloadLatest = true;
+                updater.StartDownload(res_md5 + "?version=" + updater.CheckVersion.LatestVersion, res_md5_latest, true);
             }
         }
 
@@ -57,18 +76,13 @@ namespace ResUpdater
             check();
         }
 
-        protected override void OnPersistentNotExists()
-        {
-            PersistentInfo = empty;
-        }
-
         protected override void OnWWW(Loc loc, WWW www)
         {
             Dictionary<string, Info> info;
             bool ok = false;
             if (www.error != null)
             {
-                updater.Reporter.GetMd5Err(loc, www.error, null);
+                updater.Reporter.ReadMd5Err(loc, www.error, null);
                 info = empty;
             }
             else
@@ -89,7 +103,7 @@ namespace ResUpdater
                 }
                 catch (Exception e)
                 {
-                    updater.Reporter.GetMd5Err(loc, null, e);
+                    updater.Reporter.ReadMd5Err(loc, null, e);
                     info = empty;
                 }
             }
@@ -116,7 +130,7 @@ namespace ResUpdater
         {
             if (StreamInfo != null && PersistentInfo != null && LatestInfo != null)
             {
-                if (updater.VersionState.NeedUpdate)
+                if (DownloadLatest)
                 {
                     if (LatestOk)
                     {
@@ -124,7 +138,7 @@ namespace ResUpdater
                     }
                     else
                     {
-                        updater.Reporter.Md5CheckOver(State.Failed, null);
+                        updater.Reporter.CheckMd5Done(State.Failed, null);
                     }
                 }
                 else
@@ -184,18 +198,18 @@ namespace ResUpdater
             {
                 File.Replace(Application.persistentDataPath + "/" + res_md5_latest,
                     Application.persistentDataPath + "/" + res_md5, null);
-                File.Replace(Application.persistentDataPath + "/" + StateVersion.res_version_latest,
-                    Application.persistentDataPath + "/" + StateVersion.res_version, null);
+                File.Replace(Application.persistentDataPath + "/" + CheckVersionState.res_version_latest,
+                    Application.persistentDataPath + "/" + CheckVersionState.res_version, null);
             }
 
             if (downloadList.Count == 0)
             {
-                updater.Reporter.Md5CheckOver(State.Success, null);
+                updater.Reporter.CheckMd5Done(State.Succeed, null);
             }
             else
             {
-                updater.Reporter.Md5CheckOver(State.ResDownload, downloadList);
-                updater.ResDownloadState.Start(downloadList);
+                updater.Reporter.CheckMd5Done(State.DownloadRes, downloadList);
+                updater.DownloadRes.Start(downloadList);
             }
         }
     }

@@ -1,9 +1,10 @@
 ﻿using System;
+using System.IO;
 using UnityEngine;
 
 namespace ResUpdater
 {
-    public class StateVersion : AbstractStateMeta
+    public class CheckVersionState : AbstractCheckState
     {
         internal const string res_version = "res.version";
         internal const string res_version_latest = "res.version.latest";
@@ -14,10 +15,9 @@ namespace ResUpdater
         public int LatestVersion { get; private set; }
 
         public int LocalVersion { get; private set; }
-        public bool NeedUpdate { get; private set; }
+        
 
-
-        public StateVersion(ResUpdater updater) : base(updater, res_version, res_version_latest)
+        public CheckVersionState(ResUpdater updater) : base(updater, res_version, res_version_latest)
         {
         }
 
@@ -27,10 +27,21 @@ namespace ResUpdater
             PersistentVersion = -1;
             LatestVersion = -1;
             LocalVersion = -1;
-            NeedUpdate = false;
             Res.useStreamVersion = false;
             Res.resourcesInStreamWhenNotUseStreamVersion.Clear();
-            DoStart(true, res_version + "?version=" + DateTime.Now.Ticks);
+
+            updater.StartCoroutine(StartRead(Loc.Stream));
+            string path = Application.persistentDataPath + "/" + res_version;
+            if (File.Exists(path))
+            {
+                updater.StartCoroutine(StartRead(Loc.Persistent));
+            }
+            else
+            {
+                PersistentVersion = 0;
+            }
+
+            updater.StartDownload(res_version + "?version=" + DateTime.Now.Ticks, res_version_latest, true);
         }
 
         protected override void OnDownloadError(Exception err)
@@ -39,18 +50,13 @@ namespace ResUpdater
             LatestVersion = 0;
             check();
         }
-
-        protected override void OnPersistentNotExists()
-        {
-            PersistentVersion = 0;
-        }
-
+        
         protected override void OnWWW(Loc loc, WWW www)
         {
             int version = 0;
             if (www.error != null)
             {
-                updater.Reporter.GetVersionErr(loc, www.error, null);
+                updater.Reporter.ReadVersionErr(loc, www.error, null);
             }
             else
             {
@@ -60,7 +66,7 @@ namespace ResUpdater
                 }
                 catch (Exception e)
                 {
-                    updater.Reporter.GetVersionErr(loc, null, e);
+                    updater.Reporter.ReadVersionErr(loc, null, e);
                 }
             }
 
@@ -88,20 +94,19 @@ namespace ResUpdater
                     if (LatestVersion == StreamVersion)
                     {
                         Res.useStreamVersion = true;
-                        updater.Reporter.VersionCheckOver(State.Success, LocalVersion, LatestVersion);
+                        updater.Reporter.CheckVersionDone(State.Succeed, LocalVersion, LatestVersion);
                     }
                     else
                     {
                         LocalVersion = Math.Max(StreamVersion, PersistentVersion);
-                        NeedUpdate = LatestVersion != PersistentVersion;
-                        updater.Reporter.VersionCheckOver(State.Md5Check, LocalVersion, LatestVersion);
-                        updater.Md5State.Start(NeedUpdate);
+                        updater.Reporter.CheckVersionDone(State.CheckMd5, LocalVersion, LatestVersion);
+                        updater.CheckMd5.Start();
                     }
                 }
                 else
                 {
                     LocalVersion = Math.Max(StreamVersion, PersistentVersion);
-                    updater.Reporter.VersionCheckOver(State.Failed, LocalVersion, LatestVersion);
+                    updater.Reporter.CheckVersionDone(State.Failed, LocalVersion, LatestVersion);
                 }
             }
         }

@@ -3,19 +3,19 @@ using System.Collections.Generic;
 
 namespace ResUpdater
 {
-    public class StateResDownload
+    public class DownloadResState
     {
         private readonly ResUpdater updater;
-        public Dictionary<string, StateMd5.Info> DownloadList { get; private set; }
+        public Dictionary<string, CheckMd5State.Info> DownloadList { get; private set; }
         public int OkCount { get; private set; }
         public int ErrCount { get; private set; }
 
-        public StateResDownload(ResUpdater resUpdater)
+        public DownloadResState(ResUpdater resUpdater)
         {
             updater = resUpdater;
         }
 
-        public void Start(Dictionary<string, StateMd5.Info> needDownloads)
+        public void Start(Dictionary<string, CheckMd5State.Info> needDownloads)
         {
             DownloadList = needDownloads;
             foreach (var kv in DownloadList)
@@ -35,9 +35,9 @@ namespace ResUpdater
             if ((OkCount + ErrCount) == DownloadList.Count)
             {
                 if (ErrCount == 0)
-                    updater.Reporter.ResDownloadOver(State.Success, 0);
+                    updater.Reporter.DownloadResDone(State.Succeed, 0);
                 else
-                    updater.Reporter.ResDownloadOver(State.Failed, ErrCount);
+                    updater.Reporter.DownloadResDone(State.Failed, ErrCount);
             }
         }
     }
