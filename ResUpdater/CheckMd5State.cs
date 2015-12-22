@@ -55,17 +55,21 @@ namespace ResUpdater
                 }
                 else
                 {
-                    DownloadLatest = true;
-                    updater.StartDownload(res_md5 + "?version=" + updater.CheckVersion.LatestVersion, res_md5_latest,
-                        true);
+                    StartDownloadLatest();
                 }
             }
             else
             {
                 PersistentInfo = empty;
-                DownloadLatest = true;
-                updater.StartDownload(res_md5 + "?version=" + updater.CheckVersion.LatestVersion, res_md5_latest, true);
+                StartDownloadLatest();
             }
+        }
+
+        private void StartDownloadLatest()
+        {
+            DownloadLatest = true;
+            LatestInfo = null;
+            updater.StartDownload(res_md5 + "?version=" + updater.CheckVersion.LatestVersion, res_md5_latest, true);
         }
 
         protected override void OnDownloadError(Exception err)
@@ -114,6 +118,10 @@ namespace ResUpdater
                     StreamInfo = info;
                     break;
                 case Loc.Persistent:
+                    if (!ok && !DownloadLatest) //try my best to recover
+                    {
+                        StartDownloadLatest();
+                    }
                     PersistentInfo = info;
                     break;
                 default:
